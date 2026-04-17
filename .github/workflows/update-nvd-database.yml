@@ -20,7 +20,7 @@ jobs:
 
       - name: Download NVD Database
         run: |
-          mvn org.owasp:dependency-check-maven:check \
+          mvn -X org.owasp:dependency-check-maven:check \
             -DnvdApiKey=${{ secrets.NVD_API_KEY }} \
             -DnvdApiDelay=500 \
             -DfailBuildOnCVSS=11 \
