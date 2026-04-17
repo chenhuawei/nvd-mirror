@@ -1,0 +1,41 @@
+name: Update NVD Database
+
+on:
+  schedule:
+    - cron: '0 2 * * 1'  
+  workflow_dispatch: 
+
+jobs:
+  update-nvd:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Download NVD Database
+        run: |
+          mvn org.owasp:dependency-check-maven:check \
+            -DnvdApiKey=${{ secrets.NVD_API_KEY }} \
+            -DnvdApiDelay=500 \
+            -DfailBuildOnCVSS=11 \
+            -DdataDirectory=${{ github.workspace }}/dc-data
+
+      - name: Compress database
+        run: |
+          tar -czf nvd-database.tar.gz -C ${{ github.workspace }} dc-data
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: nvd-data-latest
+          name: NVD Database Latest
+          files: nvd-database.tar.gz
+          body: "Updated at ${{ github.run_id }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
