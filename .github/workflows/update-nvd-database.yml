@@ -21,17 +21,31 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Download NVD Database
+      - name: Restore NVD database cache
+        uses: actions/cache/restore@v4
+        id: cache-restore
+        with:
+          path: ${{ github.workspace }}/dc-data
+          key: nvd-data-${{ runner.os }}
+
+      - name: Download/Update NVD Database
         run: |
-          mvn -X org.owasp:dependency-check-maven:check \
+          mkdir -p empty-scan
+          mvn org.owasp:dependency-check-maven:check \
             -DnvdApiKey=${{ secrets.NVD_API_KEY }} \
             -DnvdApiDelay=500 \
             -DfailBuildOnCVSS=11 \
-            -DdataDirectory=${{ github.workspace }}/dc-data
+            -DdataDirectory=${{ github.workspace }}/dc-data \
+            -Dscan=${{ github.workspace }}/empty-scan
+
+      - name: Save NVD database cache
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ github.workspace }}/dc-data
+          key: nvd-data-${{ runner.os }}
 
       - name: Compress database
-        run: |
-          tar -czf nvd-database.tar.gz -C ${{ github.workspace }} dc-data
+        run: tar -czf nvd-database.tar.gz -C ${{ github.workspace }} dc-data
 
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v1
