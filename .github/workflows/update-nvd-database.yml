@@ -62,12 +62,13 @@ jobs:
       - name: Compress database
         run: tar -czf nvd-database.tar.gz -C ${{ github.workspace }} dc-data
 
-      - name: Upload to GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: nvd-data-latest
-          name: NVD Database Latest
-          files: nvd-database.tar.gz
-          body: "Updated at ${{ github.run_id }}"
+      - name: Create or update Release
+        run: |
+          # 如果 tag 已存在则删除重建
+          gh release delete nvd-data-latest --yes 2>/dev/null || true
+          gh release create nvd-data-latest \
+            --title "NVD Database Latest" \
+            --notes "Updated at ${{ github.run_id }}" \
+            nvd-database.tar.gz
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
