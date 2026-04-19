@@ -5,6 +5,9 @@ on:
     - cron: '0 2 * * 1'  
   workflow_dispatch: 
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # 提前适配 Node.js 24
+
 jobs:
   update-nvd:
     runs-on: ubuntu-latest
@@ -13,32 +16,29 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up JDK
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: Cache Maven repository
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            maven-${{ runner.os }}
+          restore-keys: maven-${{ runner.os }}-
 
       - name: Get current date
         id: date
         run: echo "date=$(date +'%Y%m%d%H%M')" >> $GITHUB_OUTPUT
 
       - name: Restore NVD database cache
-        uses: actions/cache/restore@v4
-        id: cache-restore
+        uses: actions/cache/restore@v5
         with:
           path: ${{ github.workspace }}/dc-data
-          # restore 用前缀匹配，自动找最近一次
           key: nvd-data-${{ runner.os }}-${{ steps.date.outputs.date }}
           restore-keys: |
             nvd-data-${{ runner.os }}-
@@ -46,7 +46,7 @@ jobs:
       - name: Download/Update NVD Database
         run: |
           mkdir -p empty-scan
-          mvn -X org.owasp:dependency-check-maven:check \
+          mvn org.owasp:dependency-check-maven:check \
             -DnvdApiKey=${{ secrets.NVD_API_KEY }} \
             -DnvdApiDelay=500 \
             -DfailBuildOnCVSS=11 \
@@ -54,17 +54,16 @@ jobs:
             -Dscan=${{ github.workspace }}/empty-scan
 
       - name: Save NVD database cache
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: ${{ github.workspace }}/dc-data
-          # save 用带时间戳的唯一 key，每次都能存成功
           key: nvd-data-${{ runner.os }}-${{ steps.date.outputs.date }}
 
       - name: Compress database
         run: tar -czf nvd-database.tar.gz -C ${{ github.workspace }} dc-data
 
       - name: Upload to GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: nvd-data-latest
           name: NVD Database Latest
