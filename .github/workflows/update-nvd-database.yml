@@ -21,6 +21,14 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Cache Maven repository
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            maven-${{ runner.os }}
+
       - name: Restore NVD database cache
         uses: actions/cache/restore@v4
         id: cache-restore
@@ -31,7 +39,7 @@ jobs:
       - name: Download/Update NVD Database
         run: |
           mkdir -p empty-scan
-          mvn org.owasp:dependency-check-maven:check \
+          mvn -X org.owasp:dependency-check-maven:check \
             -DnvdApiKey=${{ secrets.NVD_API_KEY }} \
             -DnvdApiDelay=500 \
             -DfailBuildOnCVSS=11 \
