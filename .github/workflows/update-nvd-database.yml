@@ -29,12 +29,19 @@ jobs:
           restore-keys: |
             maven-${{ runner.os }}
 
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y%m%d%H%M')" >> $GITHUB_OUTPUT
+
       - name: Restore NVD database cache
         uses: actions/cache/restore@v4
         id: cache-restore
         with:
           path: ${{ github.workspace }}/dc-data
-          key: nvd-data-${{ runner.os }}
+          # restore 用前缀匹配，自动找最近一次
+          key: nvd-data-${{ runner.os }}-${{ steps.date.outputs.date }}
+          restore-keys: |
+            nvd-data-${{ runner.os }}-
 
       - name: Download/Update NVD Database
         run: |
@@ -50,7 +57,8 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: ${{ github.workspace }}/dc-data
-          key: nvd-data-${{ runner.os }}
+          # save 用带时间戳的唯一 key，每次都能存成功
+          key: nvd-data-${{ runner.os }}-${{ steps.date.outputs.date }}
 
       - name: Compress database
         run: tar -czf nvd-database.tar.gz -C ${{ github.workspace }} dc-data
